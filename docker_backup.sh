@@ -78,6 +78,7 @@ synology_config_backup_dir="/volume1/Backups/Server2_Config_Backup/config_files"
 
 #Fortigateconfig file backup variables
 fortigate_config_backup_dir="/volume1/Backups/Fortigate/config_files"
+fortigate_config_backup_source="/volume2/fortigate_auto_backup"
 
 #setup log file
 echo "Beginning backup of 
@@ -213,10 +214,10 @@ if [ "$current_dir" = "$grafana_backup_dir" ]; then
 				echo "Dashboard ${dash}-${slug}.json Successfully Exported" |& tee -a $log_file_location
 		
 				#remove lines 2 through 24 as they are meta data that breaks the import process so we need to remove it		
-				sed -i '2,24d' dashboards_$DATE/${dash}-${slug}.json
+				#sed -i '2,24d' dashboards_$DATE/${dash}-${slug}.json
 		
 				#remove last line as it has the end bracket for th meta data which needs to be removed since the meta data was deleted above
-				sed -i '$d' dashboards_$DATE/${dash}-${slug}.json
+				#sed -i '$d' dashboards_$DATE/${dash}-${slug}.json
 				
 				let dash_count=dash_count+1
 			else
@@ -288,7 +289,7 @@ fi
 now=$(date +"%T")
 echo "" |& tee -a $log_file_location
 echo "$now - Creating backup file of sickchill container" |& tee -a $log_file_location
-curl -k -u user:password https://$sickchill_IP:$sickchill_port/config/backuprestore/backup?backupDir=$sickchill_backup_target_dir  |& tee -a $log_file_location
+curl -k -u brian:MKcbwa17 https://$sickchill_IP:$sickchill_port/config/backuprestore/backup?backupDir=$sickchill_backup_target_dir  |& tee -a $log_file_location
 
 
 cd $docker_directory/$sickchill_docker_folder_name$sickchill_backup_target_dir
@@ -343,6 +344,14 @@ else
 		echo "Back up of Server2 DSM Configuration failed, backup file not in destination folder" |& tee -a $log_file_location
 	fi
 fi
+
+#####################################
+#backing up fortigate configuration
+#####################################
+now=$(date +"%T")
+echo "" |& tee -a $log_file_location
+echo "$now - Backing up Fortigate Daily Auto-Backups" |& tee -a $log_file_location
+find $fortigate_config_backup_source/ -type f -print0 | xargs -0 mv -t $fortigate_config_backup_dir  |& tee -a $log_file_location
 
 #####################################
 #Cleanup activities
@@ -421,14 +430,15 @@ else
 	echo "Could not change directory to $synology_config_backup_dir, canceling cleaning of Synology Config backup directory $synology_config_backup_dir" |& tee -a $log_file_location
 fi	
 
-#cd $fortigate_config_backup_dir
-#current_dir=$(pwd)
-#if [ "$current_dir" = "$fortigate_config_backup_dir" ]; then
-#	echo "Cleaning up Fortigate Config backup directory $fortigate_config_backup_dir" |& tee -a $log_file_location
-#	ls -1t | tail -n +10 | xargs rm -f
-#else
-#	echo "Could not change directory to $fortigate_config_backup_dir, canceling cleaning of Fortigate Config backup directory $fortigate_config_backup_dir" |& tee -a $log_file_location
-#fi
+cd $fortigate_config_backup_dir
+current_dir=$(pwd)
+if [ "$current_dir" = "$fortigate_config_backup_dir" ]; then
+	echo "Cleaning up Fortigate Config backup directory $fortigate_config_backup_dir" |& tee -a $log_file_location
+	rm -r @eaDir |& tee -a $log_file_location
+	ls -1t | tail -n +60 | xargs rm -f
+else
+	echo "Could not change directory to $fortigate_config_backup_dir, canceling cleaning of Fortigate Config backup directory $fortigate_config_backup_dir" |& tee -a $log_file_location
+fi
 
 now=$(date +"%T")
 echo "" |& tee -a $log_file_location
